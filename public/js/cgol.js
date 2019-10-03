@@ -5,10 +5,11 @@
       this.cells = []
       this.colors = colors
       this.ctx = canvas.getContext('2d')
-      this.scale = 5
+      this.scale = scale
       this.dragging = false
       this.paused = false // TODO: toggle this using spacebar listener
       this.handlers = {
+        handleSpacebar: this.handleSpacebar.bind(this),
         handleMouseDown: this.handleMouseDown.bind(this),
         handleMouseMove: this.handleMouseMove.bind(this),
         handleMouseUp: this.handleMouseUp.bind(this)
@@ -60,10 +61,6 @@
     setupCells () {
       const len = this.cellsLength
       
-      // Instead of storing our cells in multiple nested arrays (x and y),
-      // we can store them in one array and derive their X and Y values later.
-      // This should result in an exponential performance gain, but I haven't
-      // tested to verify.
       for (let i = 0; i < len; i++) {
         this.cells.push(new Cell(this, i))
       }
@@ -74,26 +71,36 @@
     }
     
     setupListeners () {
+      this.ctx.canvas.addEventListener('keypress', this.handlers.handleSpacebar)
       this.ctx.canvas.addEventListener('mousedown', this.handlers.handleMouseDown)
       this.ctx.canvas.addEventListener('mouseup', this.handlers.handleMouseUp)
       this.ctx.canvas.addEventListener('mousemove', this.handlers.handleMouseMove)
     }
     
     drawAtCoords(clientX, clientY) {
-      console.log('drawing at cords', clientX, clientY)
-      const x = Math.floor(clientX / this.scale)
-      const y = Math.floor(clientY / this.scale)
-      const i = (y * this.columns) + x
-      const cell = this.cells[i]
-      const neighbors = cell.neighbors
-      
-      cell.alive = true
-      
-      neighbors.forEach(neighbor => {
-        this.cells[neighbor].alive = Math.random() < 0.5
-      })      
+      if (!this.paused){
+        const x = Math.floor(clientX / this.scale)
+        const y = Math.floor(clientY / this.scale)
+        const i = (y * this.columns) + x
+        const cell = this.cells[i]
+        const neighbors = cell.neighbors
+        
+        cell.alive = true
+        
+        neighbors.forEach(neighbor => {
+          this.cells[neighbor].alive = Math.random() < 0.6
+        })      
+      }
     }
     
+    handleSpacebar (e) {
+      console.log(this.paused)
+      const SPACEBAR = 32
+      if (e.which === SPACEBAR) {
+        this.paused = !this.paused
+      }
+    }
+
     handleMouseDown (e) {
       
       this.dragging = true
@@ -115,6 +122,7 @@
     
     destroy () {
       window.cancelAnimationFrame(this.handlers.raf)
+      this.ctx.canvas.removeEventListener('keypress', this.handlers.handleSpacebar)
       this.ctx.canvas.removeEventListener('mousedown', this.handlers.handleMouseDown)
       this.ctx.canvas.removeEventListener('mouseup', this.handlers.handleMouseUp)
       this.ctx.canvas.removeEventListener('mousemove', this.handlers.handleMouseMove)
@@ -122,6 +130,7 @@
       this.dragging = false
       this.handlers = {
         handleMouseDown: this.handleMouseDown.bind(this),
+        handleSpacebar: this.handleSpacebar.bind(this),
         handleMouseMove: this.handleMouseMove.bind(this),
         handleMouseUp: this.handleMouseUp.bind(this)
       }
@@ -156,8 +165,8 @@
   
   class Cell {
     constructor (board, i) {
-      // this.alive = false;
-      this.alive = Math.random() < 0.2
+      this.alive = false;
+      // this.alive = Math.random() < 0.2
       this.board = board
       this.i = i
       // X and Y are derivatives of the cell's index in the array.
@@ -279,7 +288,6 @@
 
   const colorSeed = Math.floor(Math.random() * 240)
   const satSeed = Math.floor((Math.random() * 60) + 20)
-  console.log(colorSeed)
   const board = new Board(canvas, 5, {bg: [240, 1, 0, 0.015], alive: [colorSeed, satSeed, 50, 1]})
   board.init()
   board.start()
